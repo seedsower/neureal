@@ -536,10 +536,33 @@ if (!reactBuildSucceeded) {
             showPage(hash);
         });
 
+        // Check if wallet is already connected on page load
+        async function checkExistingWalletConnection() {
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                    console.log('Existing accounts found:', accounts);
+                    if (accounts.length > 0) {
+                        walletAddress = accounts[0];
+                        walletConnected = true;
+                        provider = new ethers.providers.Web3Provider(window.ethereum);
+                        console.log('Wallet already connected:', walletAddress);
+                        updateWalletUI();
+                    }
+                } catch (error) {
+                    console.log('Error checking existing wallet connection:', error);
+                }
+            }
+        }
+
         // Initialize page based on URL
-        window.addEventListener('load', function() {
+        window.addEventListener('load', async function() {
             const hash = window.location.hash.substring(1) || 'home';
             showPage(hash);
+            
+            // Check for existing wallet connection
+            await checkExistingWalletConnection();
+            
             // Initialize predict page UI
             updatePredictPageUI();
         });
@@ -616,22 +639,37 @@ if (!reactBuildSucceeded) {
         // Connect wallet specifically from predict page
         async function connectWalletFromPredict() {
             console.log('Connecting wallet from predict page...');
-            await connectWallet();
-            // Force update predict page UI after connection attempt
-            setTimeout(updatePredictPageUI, 500);
+            try {
+                await connectWallet();
+                console.log('Wallet connection completed, state:', { walletConnected, walletAddress });
+                // Force update predict page UI after connection attempt
+                setTimeout(() => {
+                    console.log('Forcing predict page UI update...');
+                    updatePredictPageUI();
+                }, 500);
+            } catch (error) {
+                console.error('Error connecting wallet from predict page:', error);
+                // Still update UI to show proper state
+                updatePredictPageUI();
+            }
         }
 
         // Connect MetaMask
         async function connectMetaMask() {
             try {
+                console.log('Starting MetaMask connection...');
                 const accounts = await window.ethereum.request({ 
                     method: 'eth_requestAccounts' 
                 });
+                
+                console.log('Accounts received:', accounts);
                 
                 if (accounts.length > 0) {
                     walletAddress = accounts[0];
                     walletConnected = true;
                     provider = new ethers.providers.Web3Provider(window.ethereum);
+                    
+                    console.log('Wallet state set:', { walletAddress, walletConnected });
                     
                     // Switch to Base network (Chain ID: 8453)
                     try {
@@ -639,7 +677,9 @@ if (!reactBuildSucceeded) {
                             method: 'wallet_switchEthereumChain',
                             params: [{ chainId: '0x2105' }], // 8453 in hex
                         });
+                        console.log('Switched to Base network');
                     } catch (switchError) {
+                        console.log('Network switch error:', switchError);
                         // If Base network is not added, add it
                         if (switchError.code === 4902) {
                             await window.ethereum.request({
@@ -656,14 +696,23 @@ if (!reactBuildSucceeded) {
                                     blockExplorerUrls: ['https://basescan.org']
                                 }]
                             });
+                            console.log('Added Base network');
                         }
                     }
                     
+                    console.log('About to update wallet UI...');
                     updateWalletUI();
-                    console.log('MetaMask connected:', walletAddress);
+                    console.log('MetaMask connected successfully:', walletAddress);
+                } else {
+                    console.log('No accounts returned from MetaMask');
                 }
             } catch (error) {
                 console.error('MetaMask connection error:', error);
+                // Reset wallet state on error
+                walletConnected = false;
+                walletAddress = '';
+                provider = null;
+                updateWalletUI();
                 throw error;
             }
         }
@@ -819,17 +868,28 @@ if (!reactBuildSucceeded) {
         // Listen for account changes
         if (typeof window.ethereum !== 'undefined') {
             window.ethereum.on('accountsChanged', function (accounts) {
+                console.log('Account changed:', accounts);
                 if (accounts.length === 0) {
+                    console.log('No accounts, disconnecting wallet');
                     disconnectWallet();
-                } else if (walletConnected && accounts[0] !== walletAddress) {
+                } else if (accounts[0] !== walletAddress) {
+                    console.log('Account switched from', walletAddress, 'to', accounts[0]);
                     walletAddress = accounts[0];
+                    walletConnected = true; // Ensure we stay connected
                     updateWalletUI();
                 }
             });
 
             window.ethereum.on('chainChanged', function (chainId) {
-                // Reload the page when chain changes
-                window.location.reload();
+                console.log('Chain changed to:', chainId);
+                // Don't reload, just update UI to maintain wallet connection
+                // Only disconnect if not on Base network
+                const baseChainId = '0x2105'; // Base network
+                if (chainId !== baseChainId) {
+                    console.log('Not on Base network, but keeping wallet connected');
+                }
+                // Keep wallet connected regardless of network
+                updateWalletUI();
             });
         }
 
