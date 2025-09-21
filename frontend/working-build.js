@@ -167,9 +167,13 @@ if (!reactBuildSucceeded) {
         <!-- Header -->
         <header class="glass m-4 p-4">
             <div class="flex justify-between items-center max-w-7xl mx-auto">
-                <div class="flex items-center space-x-2">
-                    <span class="text-2xl">🧠</span>
-                    <h1 class="text-2xl font-bold">Neureal</h1>
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-600 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                        </svg>
+                    </div>
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">Neureal</h1>
                 </div>
                 <nav class="hidden md:flex space-x-4">
                     <a href="#" class="nav-link" onclick="showPage('home')">Home</a>
@@ -190,7 +194,14 @@ if (!reactBuildSucceeded) {
             <!-- Home Page -->
             <div id="home-page" class="page">
                 <div class="text-center mb-12">
-                    <h1 class="text-6xl font-bold mb-4">🧠 Neureal</h1>
+                    <div class="flex justify-center items-center mb-6">
+                        <div class="w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-600 rounded-2xl flex items-center justify-center mr-4">
+                            <svg class="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                            </svg>
+                        </div>
+                        <h1 class="text-6xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">Neureal</h1>
+                    </div>
                     <p class="text-2xl opacity-90 mb-6">Web3 Prediction Market dApp</p>
                     <p class="text-lg opacity-75 max-w-2xl mx-auto">
                         Predict NEURAL token price movements, stake your predictions, and earn from the pool when you're right.
@@ -236,12 +247,35 @@ if (!reactBuildSucceeded) {
                             <div class="text-sm opacity-75">Time Remaining</div>
                             <div class="text-2xl font-bold" id="countdown">23:45:12</div>
                         </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <button class="prediction-btn up-btn" onclick="makePrediction('up')">
+                        <!-- Wallet Connection Status -->
+                        <div id="predict-wallet-status" class="mb-4 p-3 bg-blue-500/20 rounded-lg" style="display: none;">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-bold text-green-400">✅ Wallet Connected</div>
+                                    <div class="text-sm opacity-75" id="predict-wallet-address"></div>
+                                </div>
+                                <div class="text-sm opacity-75">Base Network</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Prediction Buttons -->
+                        <div class="grid grid-cols-2 gap-4" id="prediction-buttons">
+                            <button class="prediction-btn up-btn" onclick="makePrediction('up')" id="up-btn">
                                 📈 Predict UP
                             </button>
-                            <button class="prediction-btn down-btn" onclick="makePrediction('down')">
+                            <button class="prediction-btn down-btn" onclick="makePrediction('down')" id="down-btn">
                                 📉 Predict DOWN
+                            </button>
+                        </div>
+                        
+                        <!-- Connect Wallet Prompt -->
+                        <div id="predict-connect-prompt" class="text-center p-6 bg-yellow-500/20 rounded-lg">
+                            <div class="mb-4">
+                                <div class="text-lg font-bold">Connect Your Wallet</div>
+                                <div class="text-sm opacity-75 mt-2">Connect your wallet to start making predictions and earn NEURAL tokens</div>
+                            </div>
+                            <button class="btn" onclick="connectWallet()">
+                                🔗 Connect Wallet to Predict
                             </button>
                         </div>
                     </div>
@@ -487,6 +521,11 @@ if (!reactBuildSucceeded) {
             // Show selected page
             document.getElementById(pageId + '-page').style.display = 'block';
             
+            // Update predict page UI if navigating to predict page
+            if (pageId === 'predict') {
+                setTimeout(updatePredictPageUI, 100); // Small delay to ensure DOM is ready
+            }
+            
             // Update URL without reload
             history.pushState({}, '', '#' + pageId);
         }
@@ -645,6 +684,7 @@ if (!reactBuildSucceeded) {
             const walletText = document.getElementById('wallet-text');
             const walletStatus = document.getElementById('wallet-status');
             
+            // Update header wallet button
             if (walletConnected) {
                 walletBtn.classList.add('wallet-connected');
                 walletText.textContent = 'Connected';
@@ -654,6 +694,48 @@ if (!reactBuildSucceeded) {
                 walletBtn.classList.remove('wallet-connected');
                 walletText.textContent = 'Connect Wallet';
                 walletStatus.style.display = 'none';
+            }
+            
+            // Update predict page UI
+            updatePredictPageUI();
+        }
+
+        // Update predict page wallet UI
+        function updatePredictPageUI() {
+            const predictWalletStatus = document.getElementById('predict-wallet-status');
+            const predictWalletAddress = document.getElementById('predict-wallet-address');
+            const predictConnectPrompt = document.getElementById('predict-connect-prompt');
+            const predictionButtons = document.getElementById('prediction-buttons');
+            
+            if (walletConnected) {
+                // Show wallet connected status
+                if (predictWalletStatus) {
+                    predictWalletStatus.style.display = 'block';
+                    predictWalletAddress.textContent = walletAddress.substring(0, 6) + '...' + walletAddress.substring(38);
+                }
+                
+                // Hide connect prompt and show prediction buttons
+                if (predictConnectPrompt) predictConnectPrompt.style.display = 'none';
+                if (predictionButtons) predictionButtons.style.display = 'grid';
+                
+                // Enable prediction buttons
+                const upBtn = document.getElementById('up-btn');
+                const downBtn = document.getElementById('down-btn');
+                if (upBtn) {
+                    upBtn.disabled = false;
+                    upBtn.style.opacity = '1';
+                }
+                if (downBtn) {
+                    downBtn.disabled = false;
+                    downBtn.style.opacity = '1';
+                }
+            } else {
+                // Hide wallet connected status
+                if (predictWalletStatus) predictWalletStatus.style.display = 'none';
+                
+                // Show connect prompt and hide prediction buttons
+                if (predictConnectPrompt) predictConnectPrompt.style.display = 'block';
+                if (predictionButtons) predictionButtons.style.display = 'none';
             }
         }
 
