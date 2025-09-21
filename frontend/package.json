@@ -42,7 +42,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "node build-fix.js",
+    "build": "SKIP_PREFLIGHT_CHECK=true react-scripts build",
     "build:original": "react-scripts build",
     "build:direct": "react-scripts build",
     "test": "react-scripts test",
