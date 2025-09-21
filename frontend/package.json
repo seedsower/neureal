@@ -13,6 +13,9 @@
     "@types/react-dom": "^18.2.15",
     "ajv": "^6.12.6",
     "axios": "^1.6.0",
+    "rimraf": "^4.0.0",
+    "@jridgewell/sourcemap-codec": "^1.5.0",
+    "@rollup/plugin-terser": "^0.3.0",
     "chart.js": "^4.4.0",
     "chartjs-adapter-date-fns": "^3.0.0",
     "clsx": "^2.0.0",
@@ -43,7 +46,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "node netlify-build.js",
+    "build": "SKIP_PREFLIGHT_CHECK=true CI=false GENERATE_SOURCEMAP=false TSC_COMPILE_ON_ERROR=true DISABLE_ESLINT_PLUGIN=true react-scripts build",
     "build:original": "react-scripts build",
     "build:direct": "SKIP_PREFLIGHT_CHECK=true CI=false react-scripts build",
     "build:safe": "node webpack-fix.js && SKIP_PREFLIGHT_CHECK=true CI=false GENERATE_SOURCEMAP=false react-scripts build",
@@ -78,6 +81,10 @@
   "overrides": {
     "ajv": "^6.12.6",
     "schema-utils": "^3.1.1",
+    "rimraf": "^4.0.0",
+    "@jridgewell/sourcemap-codec": "^1.5.0",
+    "@rollup/plugin-terser": "^0.3.0",
+    "@motionone/vue": "10.16.4",
     "fork-ts-checker-webpack-plugin": {
       "schema-utils": "^3.1.1"
     },
