@@ -46,7 +46,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "SKIP_PREFLIGHT_CHECK=true CI=false GENERATE_SOURCEMAP=false TSC_COMPILE_ON_ERROR=true DISABLE_ESLINT_PLUGIN=true react-scripts build",
+    "build": "node working-build.js",
     "build:original": "react-scripts build",
     "build:direct": "SKIP_PREFLIGHT_CHECK=true CI=false react-scripts build",
     "build:safe": "node webpack-fix.js && SKIP_PREFLIGHT_CHECK=true CI=false GENERATE_SOURCEMAP=false react-scripts build",
