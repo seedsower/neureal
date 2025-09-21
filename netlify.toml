@@ -1,0 +1,59 @@
+[build]
+  # Build command for the React frontend
+  command = "cd frontend && npm install && npm run build"
+  # Directory to publish (React build output)
+  publish = "frontend/build"
+  # Node.js version
+  environment = { NODE_VERSION = "18" }
+
+[build.environment]
+  # Frontend environment variables for Netlify
+  REACT_APP_API_URL = "https://neureal-api.herokuapp.com/api/v1"
+  REACT_APP_WS_URL = "wss://neureal-api.herokuapp.com"
+  REACT_APP_CHAIN_ID = "8453"
+  REACT_APP_CHAIN_NAME = "Base"
+  REACT_APP_ENABLE_ANALYTICS = "true"
+  REACT_APP_ENABLE_NOTIFICATIONS = "true"
+  GENERATE_SOURCEMAP = "false"
+
+# Redirect rules for React Router (SPA)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers for security and performance
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https: wss: ws:;"
+
+# Cache static assets
+[[headers]]
+  for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Functions for serverless backend (optional)
+[functions]
+  directory = "netlify/functions"
+
+# Dev server settings
+[dev]
+  command = "cd frontend && npm start"
+  port = 3000
+  publish = "frontend/build"
