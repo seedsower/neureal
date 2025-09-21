@@ -259,7 +259,7 @@ if (!reactBuildSucceeded) {
                         </div>
                         
                         <!-- Prediction Buttons -->
-                        <div class="grid grid-cols-2 gap-4" id="prediction-buttons">
+                        <div class="grid grid-cols-2 gap-4" id="prediction-buttons" style="display: none;">
                             <button class="prediction-btn up-btn" onclick="makePrediction('up')" id="up-btn">
                                 📈 Predict UP
                             </button>
@@ -274,7 +274,7 @@ if (!reactBuildSucceeded) {
                                 <div class="text-lg font-bold">Connect Your Wallet</div>
                                 <div class="text-sm opacity-75 mt-2">Connect your wallet to start making predictions and earn NEURAL tokens</div>
                             </div>
-                            <button class="btn" onclick="connectWallet()">
+                            <button class="btn" onclick="connectWalletFromPredict()">
                                 🔗 Connect Wallet to Predict
                             </button>
                         </div>
@@ -540,6 +540,8 @@ if (!reactBuildSucceeded) {
         window.addEventListener('load', function() {
             const hash = window.location.hash.substring(1) || 'home';
             showPage(hash);
+            // Initialize predict page UI
+            updatePredictPageUI();
         });
 
         // Update countdown timer
@@ -609,6 +611,14 @@ if (!reactBuildSucceeded) {
                 console.error('Wallet connection error:', error);
                 alert('Failed to connect wallet. Please try again.');
             }
+        }
+
+        // Connect wallet specifically from predict page
+        async function connectWalletFromPredict() {
+            console.log('Connecting wallet from predict page...');
+            await connectWallet();
+            // Force update predict page UI after connection attempt
+            setTimeout(updatePredictPageUI, 500);
         }
 
         // Connect MetaMask
@@ -702,21 +712,38 @@ if (!reactBuildSucceeded) {
 
         // Update predict page wallet UI
         function updatePredictPageUI() {
+            console.log('Updating predict page UI, wallet connected:', walletConnected);
+            
             const predictWalletStatus = document.getElementById('predict-wallet-status');
             const predictWalletAddress = document.getElementById('predict-wallet-address');
             const predictConnectPrompt = document.getElementById('predict-connect-prompt');
             const predictionButtons = document.getElementById('prediction-buttons');
             
-            if (walletConnected) {
+            console.log('Elements found:', {
+                predictWalletStatus: !!predictWalletStatus,
+                predictWalletAddress: !!predictWalletAddress,
+                predictConnectPrompt: !!predictConnectPrompt,
+                predictionButtons: !!predictionButtons
+            });
+            
+            if (walletConnected && walletAddress) {
+                console.log('Showing connected state for:', walletAddress);
+                
                 // Show wallet connected status
                 if (predictWalletStatus) {
                     predictWalletStatus.style.display = 'block';
+                }
+                if (predictWalletAddress) {
                     predictWalletAddress.textContent = walletAddress.substring(0, 6) + '...' + walletAddress.substring(38);
                 }
                 
                 // Hide connect prompt and show prediction buttons
-                if (predictConnectPrompt) predictConnectPrompt.style.display = 'none';
-                if (predictionButtons) predictionButtons.style.display = 'grid';
+                if (predictConnectPrompt) {
+                    predictConnectPrompt.style.display = 'none';
+                }
+                if (predictionButtons) {
+                    predictionButtons.style.display = 'grid';
+                }
                 
                 // Enable prediction buttons
                 const upBtn = document.getElementById('up-btn');
@@ -724,18 +751,42 @@ if (!reactBuildSucceeded) {
                 if (upBtn) {
                     upBtn.disabled = false;
                     upBtn.style.opacity = '1';
+                    upBtn.style.cursor = 'pointer';
                 }
                 if (downBtn) {
                     downBtn.disabled = false;
                     downBtn.style.opacity = '1';
+                    downBtn.style.cursor = 'pointer';
                 }
             } else {
+                console.log('Showing disconnected state');
+                
                 // Hide wallet connected status
-                if (predictWalletStatus) predictWalletStatus.style.display = 'none';
+                if (predictWalletStatus) {
+                    predictWalletStatus.style.display = 'none';
+                }
                 
                 // Show connect prompt and hide prediction buttons
-                if (predictConnectPrompt) predictConnectPrompt.style.display = 'block';
-                if (predictionButtons) predictionButtons.style.display = 'none';
+                if (predictConnectPrompt) {
+                    predictConnectPrompt.style.display = 'block';
+                }
+                if (predictionButtons) {
+                    predictionButtons.style.display = 'none';
+                }
+                
+                // Disable prediction buttons
+                const upBtn = document.getElementById('up-btn');
+                const downBtn = document.getElementById('down-btn');
+                if (upBtn) {
+                    upBtn.disabled = true;
+                    upBtn.style.opacity = '0.5';
+                    upBtn.style.cursor = 'not-allowed';
+                }
+                if (downBtn) {
+                    downBtn.disabled = true;
+                    downBtn.style.opacity = '0.5';
+                    downBtn.style.cursor = 'not-allowed';
+                }
             }
         }
 
