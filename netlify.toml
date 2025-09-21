@@ -2,7 +2,7 @@
 # This file configures the build and deployment settings
 
 [build]
-  command = "cd frontend && npm ci --legacy-peer-deps && mkdir -p build && echo '<!DOCTYPE html><html><head><title>Neureal - Web3 Prediction Market</title><style>body{font-family:sans-serif;margin:0;padding:40px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;min-height:100vh;display:flex;align-items:center;justify-content:center}.container{text-align:center;max-width:600px}h1{font-size:3rem;margin-bottom:1rem}p{font-size:1.2rem;opacity:0.9}.status{background:rgba(255,255,255,0.1);padding:20px;border-radius:10px;margin-top:2rem}</style></head><body><div class=\"container\"><h1>🧠 Neureal</h1><p>Web3 Prediction Market dApp</p><div class=\"status\"><h3>✅ Deployment Successful!</h3><p>The Neureal dApp is now live on Netlify.</p><p><strong>Status:</strong> Build completed and deployed</p><p><strong>Version:</strong> 1.0.0</p></div></div></body></html>' > build/index.html"
+  command = "cd frontend && npm ci --legacy-peer-deps && npm run build"
   publish = "frontend/build"
   
 [build.environment]
