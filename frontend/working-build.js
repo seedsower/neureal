@@ -75,6 +75,8 @@ if (!reactBuildSucceeded) {
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/react-router-dom@6/dist/umd/react-router-dom.production.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
     <style>
         body { 
             margin: 0; 
@@ -143,6 +145,21 @@ if (!reactBuildSucceeded) {
         .prediction-btn:hover {
             transform: translateY(-2px);
         }
+        .leaderboard-tab {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .leaderboard-tab.active {
+            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+            border: 1px solid rgba(59, 130, 246, 0.5);
+        }
+        .wallet-connected {
+            background: linear-gradient(45deg, #10b981, #059669);
+        }
+        .wallet-status {
+            font-size: 0.75rem;
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
@@ -161,7 +178,10 @@ if (!reactBuildSucceeded) {
                     <a href="#" class="nav-link" onclick="showPage('leaderboard')">Leaderboard</a>
                     <a href="#" class="nav-link" onclick="showPage('stats')">Stats</a>
                 </nav>
-                <button class="btn" onclick="connectWallet()">Connect Wallet</button>
+                <button class="btn" onclick="connectWallet()" id="wallet-btn">
+                    <span id="wallet-text">Connect Wallet</span>
+                    <div id="wallet-status" class="wallet-status" style="display: none;"></div>
+                </button>
             </div>
         </header>
 
@@ -268,32 +288,117 @@ if (!reactBuildSucceeded) {
             <!-- Leaderboard Page -->
             <div id="leaderboard-page" class="page" style="display: none;">
                 <h2 class="text-4xl font-bold mb-8">Leaderboard</h2>
-                <div class="card">
+                
+                <!-- Leaderboard Tabs -->
+                <div class="flex space-x-4 mb-6">
+                    <button class="btn leaderboard-tab active" onclick="switchLeaderboard('streak')" id="streak-tab">
+                        🔥 Current Streak
+                    </button>
+                    <button class="btn leaderboard-tab" onclick="switchLeaderboard('accuracy')" id="accuracy-tab">
+                        🎯 Lifetime Accuracy
+                    </button>
+                </div>
+
+                <!-- Streak Leaderboard -->
+                <div id="streak-leaderboard" class="card">
+                    <h3 class="text-xl font-bold mb-4">Top Current Streaks</h3>
                     <div class="space-y-4">
                         <div class="flex justify-between items-center p-4 bg-yellow-500/20 rounded-lg">
                             <div class="flex items-center space-x-4">
                                 <span class="text-2xl">🥇</span>
                                 <div>
-                                    <div class="font-bold">PredictionMaster</div>
-                                    <div class="text-sm opacity-75">95% Win Rate</div>
+                                    <div class="font-bold">StreakMaster</div>
+                                    <div class="text-sm opacity-75">Current: 24 wins in a row</div>
                                 </div>
                             </div>
                             <div class="text-right">
-                                <div class="font-bold text-green-400">+1,250.5 NEURAL</div>
-                                <div class="text-sm opacity-75">Total Earnings</div>
+                                <div class="font-bold text-orange-400">🔥 24</div>
+                                <div class="text-sm opacity-75">Win Streak</div>
                             </div>
                         </div>
                         <div class="flex justify-between items-center p-4 bg-gray-500/20 rounded-lg">
                             <div class="flex items-center space-x-4">
                                 <span class="text-2xl">🥈</span>
                                 <div>
-                                    <div class="font-bold">CryptoTrader</div>
-                                    <div class="text-sm opacity-75">87% Win Rate</div>
+                                    <div class="font-bold">FireTrader</div>
+                                    <div class="text-sm opacity-75">Current: 18 wins in a row</div>
                                 </div>
                             </div>
                             <div class="text-right">
-                                <div class="font-bold text-green-400">+892.3 NEURAL</div>
-                                <div class="text-sm opacity-75">Total Earnings</div>
+                                <div class="font-bold text-orange-400">🔥 18</div>
+                                <div class="text-sm opacity-75">Win Streak</div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center p-4 bg-orange-500/20 rounded-lg">
+                            <div class="flex items-center space-x-4">
+                                <span class="text-2xl">🥉</span>
+                                <div>
+                                    <div class="font-bold">HotHands</div>
+                                    <div class="text-sm opacity-75">Current: 15 wins in a row</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-orange-400">🔥 15</div>
+                                <div class="text-sm opacity-75">Win Streak</div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center p-4 bg-slate-500/20 rounded-lg">
+                            <div class="flex items-center space-x-4">
+                                <span class="text-xl">4️⃣</span>
+                                <div>
+                                    <div class="font-bold">ConsistentWins</div>
+                                    <div class="text-sm opacity-75">Current: 12 wins in a row</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-orange-400">🔥 12</div>
+                                <div class="text-sm opacity-75">Win Streak</div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center p-4 bg-slate-500/20 rounded-lg">
+                            <div class="flex items-center space-x-4">
+                                <span class="text-xl">5️⃣</span>
+                                <div>
+                                    <div class="font-bold">LuckyStreak</div>
+                                    <div class="text-sm opacity-75">Current: 9 wins in a row</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-orange-400">🔥 9</div>
+                                <div class="text-sm opacity-75">Win Streak</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Accuracy Leaderboard -->
+                <div id="accuracy-leaderboard" class="card" style="display: none;">
+                    <h3 class="text-xl font-bold mb-4">Lifetime Accuracy Leaders</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center p-4 bg-yellow-500/20 rounded-lg">
+                            <div class="flex items-center space-x-4">
+                                <span class="text-2xl">🥇</span>
+                                <div>
+                                    <div class="font-bold">PredictionMaster</div>
+                                    <div class="text-sm opacity-75">347 correct / 365 total predictions</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-green-400">95.1%</div>
+                                <div class="text-sm opacity-75">Accuracy</div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center p-4 bg-gray-500/20 rounded-lg">
+                            <div class="flex items-center space-x-4">
+                                <span class="text-2xl">🥈</span>
+                                <div>
+                                    <div class="font-bold">CryptoOracle</div>
+                                    <div class="text-sm opacity-75">523 correct / 567 total predictions</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-green-400">92.2%</div>
+                                <div class="text-sm opacity-75">Accuracy</div>
                             </div>
                         </div>
                         <div class="flex justify-between items-center p-4 bg-orange-500/20 rounded-lg">
@@ -301,13 +406,46 @@ if (!reactBuildSucceeded) {
                                 <span class="text-2xl">🥉</span>
                                 <div>
                                     <div class="font-bold">TokenWizard</div>
-                                    <div class="text-sm opacity-75">82% Win Rate</div>
+                                    <div class="text-sm opacity-75">789 correct / 876 total predictions</div>
                                 </div>
                             </div>
                             <div class="text-right">
-                                <div class="font-bold text-green-400">+634.7 NEURAL</div>
-                                <div class="text-sm opacity-75">Total Earnings</div>
+                                <div class="font-bold text-green-400">90.1%</div>
+                                <div class="text-sm opacity-75">Accuracy</div>
                             </div>
+                        </div>
+                        <div class="flex justify-between items-center p-4 bg-slate-500/20 rounded-lg">
+                            <div class="flex items-center space-x-4">
+                                <span class="text-xl">4️⃣</span>
+                                <div>
+                                    <div class="font-bold">MarketSage</div>
+                                    <div class="text-sm opacity-75">1,234 correct / 1,398 total predictions</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-green-400">88.3%</div>
+                                <div class="text-sm opacity-75">Accuracy</div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center p-4 bg-slate-500/20 rounded-lg">
+                            <div class="flex items-center space-x-4">
+                                <span class="text-xl">5️⃣</span>
+                                <div>
+                                    <div class="font-bold">TrendFollower</div>
+                                    <div class="text-sm opacity-75">2,156 correct / 2,456 total predictions</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-green-400">87.8%</div>
+                                <div class="text-sm opacity-75">Accuracy</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Minimum Predictions Note -->
+                    <div class="mt-4 p-3 bg-blue-500/20 rounded-lg">
+                        <div class="text-sm opacity-75">
+                            <strong>Note:</strong> Minimum 100 predictions required for accuracy leaderboard ranking.
                         </div>
                     </div>
                 </div>
@@ -407,14 +545,159 @@ if (!reactBuildSucceeded) {
             }
         }
 
-        // Wallet connection
-        function connectWallet() {
-            alert('Wallet connection would be implemented here!\\n\\nThis would integrate with:\\n• MetaMask\\n• WalletConnect\\n• Coinbase Wallet\\n• Other Web3 wallets');
+        // Global wallet state
+        let walletConnected = false;
+        let walletAddress = '';
+        let provider = null;
+
+        // Wallet connection with MetaMask and WalletConnect
+        async function connectWallet() {
+            try {
+                if (walletConnected) {
+                    // Disconnect wallet
+                    disconnectWallet();
+                    return;
+                }
+
+                // Check if MetaMask is available
+                if (typeof window.ethereum !== 'undefined') {
+                    await connectMetaMask();
+                } else {
+                    // Fallback to WalletConnect
+                    await connectWalletConnect();
+                }
+            } catch (error) {
+                console.error('Wallet connection error:', error);
+                alert('Failed to connect wallet. Please try again.');
+            }
         }
 
-        // Make prediction
+        // Connect MetaMask
+        async function connectMetaMask() {
+            try {
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                
+                if (accounts.length > 0) {
+                    walletAddress = accounts[0];
+                    walletConnected = true;
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    
+                    // Switch to Base network (Chain ID: 8453)
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: '0x2105' }], // 8453 in hex
+                        });
+                    } catch (switchError) {
+                        // If Base network is not added, add it
+                        if (switchError.code === 4902) {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: '0x2105',
+                                    chainName: 'Base',
+                                    nativeCurrency: {
+                                        name: 'Ethereum',
+                                        symbol: 'ETH',
+                                        decimals: 18
+                                    },
+                                    rpcUrls: ['https://mainnet.base.org'],
+                                    blockExplorerUrls: ['https://basescan.org']
+                                }]
+                            });
+                        }
+                    }
+                    
+                    updateWalletUI();
+                    console.log('MetaMask connected:', walletAddress);
+                }
+            } catch (error) {
+                console.error('MetaMask connection error:', error);
+                throw error;
+            }
+        }
+
+        // Connect WalletConnect (fallback)
+        async function connectWalletConnect() {
+            try {
+                // This would implement WalletConnect v2
+                alert('WalletConnect integration would be implemented here.\\n\\nFor now, please install MetaMask to connect your wallet.');
+            } catch (error) {
+                console.error('WalletConnect error:', error);
+                throw error;
+            }
+        }
+
+        // Disconnect wallet
+        function disconnectWallet() {
+            walletConnected = false;
+            walletAddress = '';
+            provider = null;
+            updateWalletUI();
+            console.log('Wallet disconnected');
+        }
+
+        // Update wallet UI
+        function updateWalletUI() {
+            const walletBtn = document.getElementById('wallet-btn');
+            const walletText = document.getElementById('wallet-text');
+            const walletStatus = document.getElementById('wallet-status');
+            
+            if (walletConnected) {
+                walletBtn.classList.add('wallet-connected');
+                walletText.textContent = 'Connected';
+                walletStatus.textContent = walletAddress.substring(0, 6) + '...' + walletAddress.substring(38);
+                walletStatus.style.display = 'block';
+            } else {
+                walletBtn.classList.remove('wallet-connected');
+                walletText.textContent = 'Connect Wallet';
+                walletStatus.style.display = 'none';
+            }
+        }
+
+        // Switch leaderboard view
+        function switchLeaderboard(type) {
+            // Update tab active states
+            document.querySelectorAll('.leaderboard-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(type + '-tab').classList.add('active');
+            
+            // Show/hide leaderboard sections
+            document.getElementById('streak-leaderboard').style.display = type === 'streak' ? 'block' : 'none';
+            document.getElementById('accuracy-leaderboard').style.display = type === 'accuracy' ? 'block' : 'none';
+        }
+
+        // Make prediction (enhanced with wallet check)
         function makePrediction(direction) {
-            alert('Prediction: ' + direction.toUpperCase() + '\\n\\nThis would:\\n• Connect to smart contract\\n• Stake NEURAL tokens\\n• Record your prediction\\n• Update pool statistics');
+            if (!walletConnected) {
+                alert('Please connect your wallet first to make predictions.');
+                return;
+            }
+            
+            const amount = prompt('Enter NEURAL amount to stake:', '10');
+            if (amount && parseFloat(amount) > 0) {
+                alert('Prediction: ' + direction.toUpperCase() + '\\nAmount: ' + amount + ' NEURAL\\n\\nThis would:\\n• Connect to smart contract\\n• Stake ' + amount + ' NEURAL tokens\\n• Record your ' + direction.toUpperCase() + ' prediction\\n• Update pool statistics');
+            }
+        }
+
+        // Listen for account changes
+        if (typeof window.ethereum !== 'undefined') {
+            window.ethereum.on('accountsChanged', function (accounts) {
+                if (accounts.length === 0) {
+                    disconnectWallet();
+                } else if (walletConnected && accounts[0] !== walletAddress) {
+                    walletAddress = accounts[0];
+                    updateWalletUI();
+                }
+            });
+
+            window.ethereum.on('chainChanged', function (chainId) {
+                // Reload the page when chain changes
+                window.location.reload();
+            });
         }
 
         // Start timers
