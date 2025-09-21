@@ -2,7 +2,7 @@
 # This file configures the build and deployment settings
 
 [build]
-  command = "cd frontend && npm ci --legacy-peer-deps && npm run build"
+  command = "cd frontend && npm install --legacy-peer-deps && npm run build"
   publish = "frontend/build"
   
 [build.environment]
