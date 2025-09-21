@@ -42,8 +42,8 @@
     "tailwindcss": "^3.3.5"
   },
   "scripts": {
-    "start": "craco start",
-    "build": "node simple-build.js",
+    "start": "react-scripts start",
+    "build": "SKIP_PREFLIGHT_CHECK=true CI=false GENERATE_SOURCEMAP=false TSC_COMPILE_ON_ERROR=true react-scripts build",
     "build:original": "react-scripts build",
     "build:direct": "SKIP_PREFLIGHT_CHECK=true CI=false react-scripts build",
     "build:safe": "node webpack-fix.js && SKIP_PREFLIGHT_CHECK=true CI=false GENERATE_SOURCEMAP=false react-scripts build",
