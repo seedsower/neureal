@@ -2,7 +2,7 @@
 # This file configures the build and deployment settings
 
 [build]
-  command = "cd frontend && npm ci --legacy-peer-deps && node comprehensive-fix.js && SKIP_PREFLIGHT_CHECK=true CI=false GENERATE_SOURCEMAP=false TSC_COMPILE_ON_ERROR=true npx react-scripts build"
+  command = "cd frontend && npm ci --legacy-peer-deps && npm run build"
   publish = "frontend/build"
   
 [build.environment]
