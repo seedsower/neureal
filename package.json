@@ -1,4 +1,11 @@
 {
+  "name": "neureal",
+  "version": "1.0.0",
+  "description": "Neureal Web3 Prediction Market dApp",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "dependencies": {
     "express": "^5.1.0"
   }
