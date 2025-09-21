@@ -7,8 +7,8 @@ import {
   UsersIcon,
 } from '@heroicons/react/24/outline';
 
-import { useCurrentRound } from '@/hooks/useCurrentRound';
-import { formatTokenAmount, formatDuration, formatCurrency } from '@/utils/formatters';
+import { useCurrentRound } from '../../hooks/useCurrentRound';
+import { formatTokenAmount, formatDuration, formatCurrency } from '../../utils/formatters';
 
 const CurrentRoundCard: React.FC = () => {
   const { data: currentRound, isLoading } = useCurrentRound();
@@ -167,8 +167,8 @@ const CurrentRoundCard: React.FC = () => {
         <div className="text-center">
           <div className="text-sm text-slate-400 mb-1">Avg Stake</div>
           <div className="text-lg font-semibold text-white">
-            {currentRound.statistics?.totalParticipants > 0
-              ? formatTokenAmount(totalPool / currentRound.statistics.totalParticipants)
+            {(currentRound.statistics?.totalParticipants || 0) > 0
+              ? formatTokenAmount(totalPool / (currentRound.statistics?.totalParticipants || 1))
               : '0'} NEURAL
           </div>
         </div>

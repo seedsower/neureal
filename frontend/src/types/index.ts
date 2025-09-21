@@ -48,6 +48,14 @@ export interface Round {
   state: RoundState;
   resolved: boolean;
   winningPosition?: Position;
+  timeRemaining?: {
+    toLock: number;
+    toEnd: number;
+  };
+  statistics?: {
+    totalParticipants: number;
+    averageStake: string;
+  };
 }
 
 export type RoundState = 'ACTIVE' | 'LOCKED' | 'RESOLVED' | 'CANCELLED';

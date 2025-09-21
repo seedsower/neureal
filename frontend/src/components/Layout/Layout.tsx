@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import Footer from './Footer';
-import { useAppStore } from '@/store/appStore';
+import { useAppStore } from '../../store/appStore';
 
 interface LayoutProps {
   children: React.ReactNode;

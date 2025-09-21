@@ -9,7 +9,7 @@ import {
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 
-import { EXTERNAL_LINKS } from '@/config/constants';
+import { EXTERNAL_LINKS } from '../config/constants';
 
 const HelpPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');

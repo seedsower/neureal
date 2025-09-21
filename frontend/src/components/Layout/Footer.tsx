@@ -2,13 +2,24 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
-import { ROUTES, EXTERNAL_LINKS } from '@/config/constants';
-import Logo from '@/components/UI/Logo';
+import { ROUTES, EXTERNAL_LINKS } from '../../config/constants';
+import Logo from '../UI/Logo';
+
+interface FooterLink {
+  name: string;
+  href: string;
+  external?: boolean;
+}
+
+interface FooterSection {
+  title: string;
+  links: FooterLink[];
+}
 
 const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
 
-  const footerLinks = [
+  const footerLinks: FooterSection[] = [
     {
       title: 'Platform',
       links: [
@@ -38,7 +49,7 @@ const Footer: React.FC = () => {
   ];
 
   return (
-    <footer className="bg-dark-900/50 border-t border-slate-700/50 mt-auto">
+    <footer className="bg-slate-900/50 border-t border-slate-700/50 mt-auto">
       <div className="mobile-padding py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand section */}

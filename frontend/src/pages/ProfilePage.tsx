@@ -3,10 +3,10 @@ import { motion } from 'framer-motion';
 import { Tab } from '@headlessui/react';
 import { clsx } from 'clsx';
 
-import ProfileSettings from '@/components/Profile/ProfileSettings';
-import UserPreferences from '@/components/Profile/UserPreferences';
-import AccountSecurity from '@/components/Profile/AccountSecurity';
-import NotificationSettings from '@/components/Profile/NotificationSettings';
+import ProfileSettings from '../components/Profile/ProfileSettings';
+import UserPreferences from '../components/Profile/UserPreferences';
+import AccountSecurity from '../components/Profile/AccountSecurity';
+import NotificationSettings from '../components/Profile/NotificationSettings';
 
 const ProfilePage: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState(0);
@@ -43,14 +43,14 @@ const ProfilePage: React.FC = () => {
       >
         <Tab.Group selectedIndex={selectedTab} onChange={setSelectedTab}>
           {/* Tab List */}
-          <Tab.List className="flex space-x-1 rounded-xl bg-dark-800/50 p-1 mb-8">
+          <Tab.List className="flex space-x-1 rounded-xl bg-slate-800/50 p-1 mb-8">
             {profileTabs.map((tab) => (
               <Tab
                 key={tab.name}
                 className={({ selected }) =>
                   clsx(
                     'w-full rounded-lg py-3 px-6 text-sm font-medium leading-5 transition-all',
-                    'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-900',
+                    'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-slate-900',
                     selected
                       ? 'bg-primary-500/20 text-primary-300 border border-primary-500/30'
                       : 'text-slate-400 hover:bg-slate-700/50 hover:text-white'

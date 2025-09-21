@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import { API_BASE_URL } from '@/config/constants';
+import { API_BASE_URL } from '../config/constants';
 
 class ApiService {
   private client: AxiosInstance;
@@ -160,10 +160,6 @@ class ApiService {
 
   async getUnclaimedPredictions() {
     return this.get('/predictions/unclaimed');
-  }
-
-  async getPredictionStats() {
-    return this.get('/predictions/stats');
   }
 
   // Leaderboard endpoints

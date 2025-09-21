@@ -8,11 +8,11 @@ import {
   ChartBarIcon,
 } from '@heroicons/react/24/outline';
 
-import { useAppStore } from '@/store/appStore';
-import { ROUTES } from '@/config/constants';
-import Logo from '@/components/UI/Logo';
-import PriceDisplay from '@/components/UI/PriceDisplay';
-import NotificationDropdown from '@/components/UI/NotificationDropdown';
+import { useAppStore } from '../../store/appStore';
+import { ROUTES } from '../../config/constants';
+import Logo from '../UI/Logo';
+import PriceDisplay from '../UI/PriceDisplay';
+import NotificationDropdown from '../UI/NotificationDropdown';
 
 const Header: React.FC = () => {
   const location = useLocation();
@@ -28,7 +28,7 @@ const Header: React.FC = () => {
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-dark-900/80 backdrop-blur-md border-b border-slate-700/50">
+    <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-slate-700/50">
       <div className="mobile-padding">
         <div className="flex items-center justify-between h-16">
           {/* Left section */}

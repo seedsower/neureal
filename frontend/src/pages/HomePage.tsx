@@ -10,9 +10,9 @@ import {
   GlobeAltIcon,
 } from '@heroicons/react/24/outline';
 
-import { ROUTES } from '@/config/constants';
-import Logo from '@/components/UI/Logo';
-import PriceDisplay from '@/components/UI/PriceDisplay';
+import { ROUTES } from '../config/constants';
+import Logo from '../components/UI/Logo';
+import PriceDisplay from '../components/UI/PriceDisplay';
 
 const HomePage: React.FC = () => {
   const features = [
@@ -155,7 +155,7 @@ const HomePage: React.FC = () => {
       </section>
 
       {/* How It Works Section */}
-      <section className="mobile-padding py-20 bg-dark-800/30">
+      <section className="mobile-padding py-20 bg-slate-800/30">
         <div className="text-center mb-16">
           <motion.div
             initial={{ opacity: 0, y: 20 }}

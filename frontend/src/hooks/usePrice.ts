@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { useAppStore } from '@/store/appStore';
+import { useAppStore } from '../store/appStore';
 import { useWebSocket } from './useWebSocket';
-import { apiService } from '@/services/api';
-import { PriceData, PriceUpdateMessage } from '@/types';
-import { PRICE_UPDATE_INTERVAL, WS_EVENTS } from '@/config/constants';
+import { apiService } from '../services/api';
+import { PriceData, PriceUpdateMessage } from '../types';
+import { PRICE_UPDATE_INTERVAL, WS_EVENTS } from '../config/constants';
 
 export const usePrice = () => {
   const { priceData, setPriceData } = useAppStore();

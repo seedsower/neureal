@@ -130,6 +130,7 @@ export const WS_EVENTS = {
   ROUND_LOCKED: 'round_locked',
   ROUND_RESOLVED: 'round_resolved',
   PREDICTION_MADE: 'prediction_made',
+  PREDICTION_CONFIRMED: 'prediction_confirmed',
   REWARD_CLAIMED: 'reward_claimed',
   USER_DATA: 'user_data',
   NOTIFICATION: 'notification',

@@ -7,8 +7,8 @@ import {
   NotificationMessage, 
   Theme,
   Transaction 
-} from '@/types';
-import { STORAGE_KEYS } from '@/config/constants';
+} from '../types';
+import { STORAGE_KEYS } from '../config/constants';
 
 interface AppState {
   // UI State

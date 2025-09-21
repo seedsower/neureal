@@ -1,11 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-import PortfolioOverview from '@/components/Portfolio/PortfolioOverview';
-import ActivePredictions from '@/components/Portfolio/ActivePredictions';
-import PredictionHistory from '@/components/Portfolio/PredictionHistory';
-import UnclaimedRewards from '@/components/Portfolio/UnclaimedRewards';
-import UserStats from '@/components/Portfolio/UserStats';
+import PortfolioOverview from '../components/Portfolio/PortfolioOverview';
+import ActivePredictions from '../components/Portfolio/ActivePredictions';
+import PredictionHistory from '../components/Portfolio/PredictionHistory';
+import UnclaimedRewards from '../components/Portfolio/UnclaimedRewards';
+import UserStats from '../components/Portfolio/UserStats';
 
 const PortfolioPage: React.FC = () => {
   return (

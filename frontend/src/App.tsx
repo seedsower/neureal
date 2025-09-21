@@ -38,7 +38,7 @@ const pageTransition = {
 
 function App() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <Layout>
         <AnimatePresence mode="wait">
           <Routes>

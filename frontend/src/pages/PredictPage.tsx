@@ -1,10 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-import PredictionInterface from '@/components/Prediction/PredictionInterface';
-import CurrentRoundCard from '@/components/Prediction/CurrentRoundCard';
-import PriceChart from '@/components/Charts/PriceChart';
-import RecentRounds from '@/components/Prediction/RecentRounds';
+import PredictionInterface from '../components/Prediction/PredictionInterface';
+import CurrentRoundCard from '../components/Prediction/CurrentRoundCard';
+import PriceChart from '../components/Charts/PriceChart';
+import RecentRounds from '../components/Prediction/RecentRounds';
 
 const PredictPage: React.FC = () => {
   return (

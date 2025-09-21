@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { io, Socket } from 'socket.io-client';
-import { useAppStore } from '@/store/appStore';
-import { WebSocketMessage } from '@/types';
-import { WS_URL, WS_EVENTS } from '@/config/constants';
+import { useAppStore } from '../store/appStore';
+import { WebSocketMessage } from '../types';
+import { WS_URL, WS_EVENTS } from '../config/constants';
 
 export const useWebSocket = () => {
   const { address } = useAccount();

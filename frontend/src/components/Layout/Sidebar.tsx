@@ -12,8 +12,8 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 
-import { ROUTES, EXTERNAL_LINKS } from '@/config/constants';
-import { NavItem } from '@/types';
+import { ROUTES, EXTERNAL_LINKS } from '../../config/constants';
+import { NavItem } from '../../types';
 
 interface SidebarProps {
   isOpen: boolean;

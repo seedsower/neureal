@@ -10,9 +10,9 @@ import {
   CheckCircleIcon,
 } from '@heroicons/react/24/outline';
 
-import { useAppStore } from '@/store/appStore';
-import { formatRelativeTime } from '@/utils/formatters';
-import { NotificationMessage } from '@/types';
+import { useAppStore } from '../../store/appStore';
+import { formatRelativeTime } from '../../utils/formatters';
+import { NotificationMessage } from '../../types';
 
 const NotificationDropdown: React.FC = () => {
   const { notifications, markNotificationRead, clearNotifications } = useAppStore();

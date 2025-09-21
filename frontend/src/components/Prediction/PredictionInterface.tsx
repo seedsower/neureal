@@ -9,9 +9,9 @@ import {
   CurrencyDollarIcon,
 } from '@heroicons/react/24/solid';
 
-import { useCurrentRound } from '@/hooks/useCurrentRound';
-import { formatTokenAmount, formatDuration } from '@/utils/formatters';
-import { POSITIONS, MIN_PREDICTION_AMOUNT, MAX_PREDICTION_AMOUNT } from '@/config/constants';
+import { useCurrentRound } from '../../hooks/useCurrentRound';
+import { formatTokenAmount, formatDuration } from '../../utils/formatters';
+import { POSITIONS, MIN_PREDICTION_AMOUNT, MAX_PREDICTION_AMOUNT } from '../../config/constants';
 
 const PredictionInterface: React.FC = () => {
   const { address, isConnected } = useAccount();

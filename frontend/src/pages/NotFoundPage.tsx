@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { HomeIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 
-import { ROUTES } from '@/config/constants';
-import Logo from '@/components/UI/Logo';
+import { ROUTES } from '../config/constants';
+import Logo from '../components/UI/Logo';
 
 const NotFoundPage: React.FC = () => {
   return (

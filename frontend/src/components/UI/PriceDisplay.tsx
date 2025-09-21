@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/solid';
-import { usePrice } from '@/hooks/usePrice';
-import { formatCurrency, formatPercentage } from '@/utils/formatters';
+import { usePrice } from '../../hooks/usePrice';
+import { formatCurrency, formatPercentage } from '../../utils/formatters';
 
 interface PriceDisplayProps {
   compact?: boolean;
