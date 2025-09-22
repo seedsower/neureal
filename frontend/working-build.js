@@ -613,6 +613,31 @@ if (!reactBuildSucceeded) {
         let walletConnected = false;
         let walletAddress = '';
         let provider = null;
+        
+        // Contract addresses (localhost for now, will update for testnet)
+        const CONTRACT_ADDRESSES = {
+            PREDICTION_MARKET: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
+            PRICE_ORACLE: '0x5FbDB2315678afecb367f032d93F642f64180aa3'
+        };
+        
+        // Contract ABIs (simplified)
+        const PREDICTION_MARKET_ABI = [
+            "function makePrediction(bool isUp) external payable",
+            "function getCurrentRound() external view returns (uint256 roundId, uint256 startTime, uint256 endTime, uint256 lockTime, uint256 upAmount, uint256 downAmount, uint256 totalAmount)",
+            "function getUserStats(address user) external view returns (uint256 totalPredictions, uint256 correctPredictions, uint256 currentStreak, uint256 bestStreak, uint256 totalWinnings, uint256 totalStaked)",
+            "function getUserAccuracy(address user) external view returns (uint256)",
+            "function minimumBet() external view returns (uint256)"
+        ];
+        
+        const PRICE_ORACLE_ABI = [
+            "function getPrice() external view returns (uint256)",
+            "function updatePrice(uint256 _price) external",
+            "function simulatePriceMovement(int256 changePercent) external"
+        ];
+        
+        // Contract instances
+        let predictionMarketContract = null;
+        let priceOracleContract = null;
 
         // Wallet connection with MetaMask and WalletConnect
         async function connectWallet() {
@@ -671,36 +696,40 @@ if (!reactBuildSucceeded) {
                     
                     console.log('Wallet state set:', { walletAddress, walletConnected });
                     
-                    // Switch to Base network (Chain ID: 8453)
+                    // Switch to localhost network for testing (Chain ID: 1337)
                     try {
                         await window.ethereum.request({
                             method: 'wallet_switchEthereumChain',
-                            params: [{ chainId: '0x2105' }], // 8453 in hex
+                            params: [{ chainId: '0x539' }], // 1337 in hex
                         });
-                        console.log('Switched to Base network');
+                        console.log('Switched to localhost network');
                     } catch (switchError) {
                         console.log('Network switch error:', switchError);
-                        // If Base network is not added, add it
+                        // If localhost network is not added, add it
                         if (switchError.code === 4902) {
                             await window.ethereum.request({
                                 method: 'wallet_addEthereumChain',
                                 params: [{
-                                    chainId: '0x2105',
-                                    chainName: 'Base',
+                                    chainId: '0x539',
+                                    chainName: 'Localhost 8545',
                                     nativeCurrency: {
                                         name: 'Ethereum',
                                         symbol: 'ETH',
                                         decimals: 18
                                     },
-                                    rpcUrls: ['https://mainnet.base.org'],
-                                    blockExplorerUrls: ['https://basescan.org']
+                                    rpcUrls: ['http://localhost:8545'],
+                                    blockExplorerUrls: []
                                 }]
                             });
-                            console.log('Added Base network');
+                            console.log('Added localhost network');
                         }
                     }
                     
                     console.log('About to update wallet UI...');
+                    
+                    // Initialize contracts
+                    await initializeContracts();
+                    
                     updateWalletUI();
                     console.log('MetaMask connected successfully:', walletAddress);
                 } else {
@@ -852,16 +881,104 @@ if (!reactBuildSucceeded) {
             document.getElementById('accuracy-leaderboard').style.display = type === 'accuracy' ? 'block' : 'none';
         }
 
-        // Make prediction (enhanced with wallet check)
-        function makePrediction(direction) {
+        // Initialize contracts after wallet connection
+        async function initializeContracts() {
+            try {
+                if (!provider || !walletAddress) return;
+                
+                console.log('Initializing contracts...');
+                
+                predictionMarketContract = new ethers.Contract(
+                    CONTRACT_ADDRESSES.PREDICTION_MARKET,
+                    PREDICTION_MARKET_ABI,
+                    provider.getSigner()
+                );
+                
+                priceOracleContract = new ethers.Contract(
+                    CONTRACT_ADDRESSES.PRICE_ORACLE,
+                    PRICE_ORACLE_ABI,
+                    provider.getSigner()
+                );
+                
+                console.log('✅ Contracts initialized successfully');
+                
+                // Update UI with real data
+                await updateRealTimeData();
+                
+            } catch (error) {
+                console.error('Contract initialization error:', error);
+            }
+        }
+        
+        // Update real-time data from contracts
+        async function updateRealTimeData() {
+            try {
+                if (!priceOracleContract || !predictionMarketContract) return;
+                
+                // Get current price from oracle
+                const currentPrice = await priceOracleContract.getPrice();
+                const priceInEth = ethers.formatUnits(currentPrice, 18);
+                
+                // Update price display
+                const priceElement = document.getElementById('current-price');
+                if (priceElement) {
+                    priceElement.textContent = '$' + parseFloat(priceInEth).toFixed(4);
+                }
+                
+                // Get current round data
+                const roundData = await predictionMarketContract.getCurrentRound();
+                console.log('Current round data:', roundData);
+                
+                // Update pool statistics
+                const upPool = ethers.formatEther(roundData[4]);
+                const downPool = ethers.formatEther(roundData[5]);
+                const totalPool = ethers.formatEther(roundData[6]);
+                
+                console.log('Pool stats - UP:', upPool, 'DOWN:', downPool, 'Total:', totalPool);
+                
+            } catch (error) {
+                console.error('Error updating real-time data:', error);
+            }
+        }
+
+        // Make prediction (enhanced with real smart contract interaction)
+        async function makePrediction(direction) {
             if (!walletConnected) {
                 alert('Please connect your wallet first to make predictions.');
                 return;
             }
             
-            const amount = prompt('Enter NEURAL amount to stake:', '10');
-            if (amount && parseFloat(amount) > 0) {
-                alert('Prediction: ' + direction.toUpperCase() + '\\nAmount: ' + amount + ' NEURAL\\n\\nThis would:\\n• Connect to smart contract\\n• Stake ' + amount + ' NEURAL tokens\\n• Record your ' + direction.toUpperCase() + ' prediction\\n• Update pool statistics');
+            if (!predictionMarketContract) {
+                alert('Contracts not initialized. Please reconnect your wallet.');
+                return;
+            }
+            
+            try {
+                const amount = prompt('Enter ETH amount to stake:', '0.001');
+                if (!amount || parseFloat(amount) <= 0) return;
+                
+                console.log('Making prediction:', direction, 'Amount:', amount);
+                
+                const isUp = direction === 'up';
+                const tx = await predictionMarketContract.makePrediction(isUp, {
+                    value: ethers.parseEther(amount)
+                });
+                
+                alert('Prediction submitted! Transaction: ' + tx.hash);
+                console.log('Prediction transaction:', tx);
+                
+                // Wait for confirmation
+                const receipt = await tx.wait();
+                console.log('Prediction confirmed:', receipt);
+                
+                alert('Prediction confirmed! ✅\\n\\nDirection: ' + direction.toUpperCase() + '\\nAmount: ' + amount + ' ETH\\nTransaction: ' + tx.hash);
+                
+                // Update real-time data
+                await updateRealTimeData();
+                
+            } catch (error) {
+                console.error('Prediction error:', error);
+                alert('Prediction failed: ' + error.message);
             }
         }
 
