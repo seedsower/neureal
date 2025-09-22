@@ -1,367 +1,346 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title NeurealPredictionMarket
- * @dev Prediction market contract for NEURAL token price predictions
+ * @dev A prediction market contract for NEURAL token price predictions
  */
 contract NeurealPredictionMarket is ReentrancyGuard, Ownable, Pausable {
-    using SafeERC20 for IERC20;
     
-    IERC20 public immutable neuralToken;
+    constructor(address _priceOracle, address _treasury) Ownable(msg.sender) {
+        priceOracle = _priceOracle;
+        treasury = _treasury;
+        currentRoundId = 1;
+        _startRound();
+    }
     
-    // Constants
-    uint256 public constant ROUND_DURATION = 24 hours;
-    uint256 public constant LOCK_DURATION = 24 hours;
-    uint256 public constant MIN_PREDICTION_AMOUNT = 1 * 10**18; // 1 NEURAL
-    uint256 public constant MAX_PREDICTION_AMOUNT = 100_000 * 10**18; // 100k NEURAL
-    uint256 public constant PLATFORM_FEE_RATE = 100; // 1% (100 basis points)
-    uint256 public constant BASIS_POINTS = 10000;
-    
-    // Enums
-    enum Position { UP, DOWN }
-    enum RoundState { ACTIVE, LOCKED, RESOLVED, CANCELLED }
-    
-    // Structs
     struct Round {
         uint256 roundId;
         uint256 startTime;
-        uint256 lockTime;
         uint256 endTime;
+        uint256 lockTime;
         uint256 startPrice;
-        uint256 lockPrice;
         uint256 endPrice;
-        uint256 totalUpAmount;
-        uint256 totalDownAmount;
-        uint256 rewardBaseCalAmount;
-        uint256 rewardAmount;
-        RoundState state;
+        uint256 upAmount;
+        uint256 downAmount;
+        uint256 totalAmount;
         bool resolved;
+        bool upWins;
     }
     
     struct Prediction {
-        Position position;
         uint256 amount;
+        bool isUp;
         bool claimed;
-        uint256 claimableAmount;
     }
     
     struct UserStats {
-        uint256 totalStaked;
+        uint256 totalPredictions;
+        uint256 correctPredictions;
+        uint256 currentStreak;
+        uint256 bestStreak;
         uint256 totalWinnings;
-        uint256 currentWinStreak;
-        uint256 maxWinStreak;
-        uint256 totalRounds;
-        uint256 wonRounds;
+        uint256 totalStaked;
     }
     
     // State variables
-    uint256 public currentRoundId;
-    uint256 public treasuryAmount;
-    address public treasuryAddress;
-    address public oracleAddress;
-    
     mapping(uint256 => Round) public rounds;
     mapping(uint256 => mapping(address => Prediction)) public predictions;
     mapping(address => UserStats) public userStats;
-    mapping(address => uint256[]) public userRounds;
+    
+    uint256 public currentRoundId;
+    uint256 public roundDuration = 24 hours; // 24 hour rounds
+    uint256 public lockDuration = 1 hours; // Lock 1 hour before end
+    uint256 public minimumBet = 0.001 ether; // Minimum bet amount
+    uint256 public treasuryFee = 300; // 3% fee (300 basis points)
+    uint256 public constant BASIS_POINTS = 10000;
+    
+    address public priceOracle;
+    address public treasury;
     
     // Events
-    event RoundStarted(uint256 indexed roundId, uint256 startTime, uint256 lockTime, uint256 endTime);
-    event RoundLocked(uint256 indexed roundId, uint256 lockPrice);
-    event RoundResolved(uint256 indexed roundId, uint256 endPrice, Position winningPosition);
-    event PredictionMade(address indexed user, uint256 indexed roundId, Position position, uint256 amount);
-    event RewardClaimed(address indexed user, uint256 indexed roundId, uint256 amount);
-    event TreasuryWithdraw(uint256 amount);
-    event OracleUpdated(address indexed newOracle);
-    event TreasuryAddressUpdated(address indexed newTreasury);
-    
-    modifier onlyOracle() {
-        require(msg.sender == oracleAddress, "Only oracle can call this function");
-        _;
-    }
-    
-    modifier validRound(uint256 roundId) {
-        require(rounds[roundId].startTime != 0, "Round does not exist");
-        _;
-    }
-    
-    constructor(
-        address _neuralToken,
-        address _treasuryAddress,
-        address _oracleAddress,
-        address _owner
-    ) Ownable(_owner) {
-        require(_neuralToken != address(0), "Invalid token address");
-        require(_treasuryAddress != address(0), "Invalid treasury address");
-        require(_oracleAddress != address(0), "Invalid oracle address");
-        
-        neuralToken = IERC20(_neuralToken);
-        treasuryAddress = _treasuryAddress;
-        oracleAddress = _oracleAddress;
-    }
-    
-    /**
-     * @dev Start a new prediction round
-     * @param startPrice Initial price for the round
-     */
-    function startRound(uint256 startPrice) external onlyOracle whenNotPaused {
-        require(startPrice > 0, "Invalid start price");
-        
-        // Resolve previous round if exists
-        if (currentRoundId > 0) {
-            require(rounds[currentRoundId].state == RoundState.RESOLVED, "Previous round not resolved");
-        }
-        
-        currentRoundId++;
-        uint256 startTime = block.timestamp;
-        uint256 lockTime = startTime + ROUND_DURATION;
-        uint256 endTime = lockTime + LOCK_DURATION;
-        
-        rounds[currentRoundId] = Round({
-            roundId: currentRoundId,
-            startTime: startTime,
-            lockTime: lockTime,
-            endTime: endTime,
-            startPrice: startPrice,
-            lockPrice: 0,
-            endPrice: 0,
-            totalUpAmount: 0,
-            totalDownAmount: 0,
-            rewardBaseCalAmount: 0,
-            rewardAmount: 0,
-            state: RoundState.ACTIVE,
-            resolved: false
-        });
-        
-        emit RoundStarted(currentRoundId, startTime, lockTime, endTime);
-    }
-    
-    /**
-     * @dev Lock the current round for predictions
-     * @param lockPrice Price at lock time
-     */
-    function lockRound(uint256 lockPrice) external onlyOracle whenNotPaused {
-        require(lockPrice > 0, "Invalid lock price");
-        require(currentRoundId > 0, "No active round");
-        
-        Round storage round = rounds[currentRoundId];
-        require(round.state == RoundState.ACTIVE, "Round not active");
-        require(block.timestamp >= round.lockTime, "Round not ready to lock");
-        
-        round.lockPrice = lockPrice;
-        round.state = RoundState.LOCKED;
-        
-        emit RoundLocked(currentRoundId, lockPrice);
-    }
-    
-    /**
-     * @dev Resolve the current round
-     * @param endPrice Final price for the round
-     */
-    function resolveRound(uint256 endPrice) external onlyOracle whenNotPaused {
-        require(endPrice > 0, "Invalid end price");
-        require(currentRoundId > 0, "No active round");
-        
-        Round storage round = rounds[currentRoundId];
-        require(round.state == RoundState.LOCKED, "Round not locked");
-        require(block.timestamp >= round.endTime, "Round not ready to resolve");
-        
-        round.endPrice = endPrice;
-        round.state = RoundState.RESOLVED;
-        round.resolved = true;
-        
-        // Determine winning position
-        Position winningPosition = endPrice > round.lockPrice ? Position.UP : Position.DOWN;
-        
-        // Calculate rewards
-        uint256 totalAmount = round.totalUpAmount + round.totalDownAmount;
-        if (totalAmount > 0) {
-            uint256 platformFee = (totalAmount * PLATFORM_FEE_RATE) / BASIS_POINTS;
-            treasuryAmount += platformFee;
-            
-            round.rewardBaseCalAmount = totalAmount - platformFee;
-            round.rewardAmount = round.rewardBaseCalAmount;
-        }
-        
-        emit RoundResolved(currentRoundId, endPrice, winningPosition);
-    }
+    event RoundStarted(uint256 indexed roundId, uint256 startTime, uint256 endTime);
+    event PredictionMade(address indexed user, uint256 indexed roundId, uint256 amount, bool isUp);
+    event RoundResolved(uint256 indexed roundId, uint256 endPrice, bool upWins);
+    event RewardsClaimed(address indexed user, uint256 indexed roundId, uint256 amount);
+    event PriceOracleUpdated(address indexed newOracle);
     
     /**
      * @dev Make a prediction for the current round
-     * @param position UP or DOWN prediction
-     * @param amount Amount of NEURAL tokens to stake
+     * @param isUp True for UP prediction, false for DOWN
      */
-    function predict(Position position, uint256 amount) external nonReentrant whenNotPaused {
-        require(amount >= MIN_PREDICTION_AMOUNT, "Amount below minimum");
-        require(amount <= MAX_PREDICTION_AMOUNT, "Amount above maximum");
-        require(currentRoundId > 0, "No active round");
+    function makePrediction(bool isUp) external payable nonReentrant whenNotPaused {
+        require(msg.value >= minimumBet, "Bet amount too small");
         
         Round storage round = rounds[currentRoundId];
-        require(round.state == RoundState.ACTIVE, "Round not active for predictions");
-        require(block.timestamp < round.lockTime, "Prediction period ended");
-        require(predictions[currentRoundId][msg.sender].amount == 0, "Already predicted this round");
-        
-        // Transfer tokens from user
-        neuralToken.safeTransferFrom(msg.sender, address(this), amount);
+        require(block.timestamp < round.lockTime, "Round locked");
+        require(predictions[currentRoundId][msg.sender].amount == 0, "Already predicted");
         
         // Record prediction
         predictions[currentRoundId][msg.sender] = Prediction({
-            position: position,
-            amount: amount,
-            claimed: false,
-            claimableAmount: 0
+            amount: msg.value,
+            isUp: isUp,
+            claimed: false
         });
         
         // Update round totals
-        if (position == Position.UP) {
-            round.totalUpAmount += amount;
+        round.totalAmount += msg.value;
+        if (isUp) {
+            round.upAmount += msg.value;
         } else {
-            round.totalDownAmount += amount;
+            round.downAmount += msg.value;
         }
         
         // Update user stats
-        userStats[msg.sender].totalStaked += amount;
-        userStats[msg.sender].totalRounds++;
-        userRounds[msg.sender].push(currentRoundId);
+        userStats[msg.sender].totalPredictions++;
+        userStats[msg.sender].totalStaked += msg.value;
         
-        emit PredictionMade(msg.sender, currentRoundId, position, amount);
+        emit PredictionMade(msg.sender, currentRoundId, msg.value, isUp);
+    }
+    
+    /**
+     * @dev Resolve the current round and start a new one
+     * @param endPrice The final price for the round
+     */
+    function resolveRound(uint256 endPrice) external {
+        require(msg.sender == priceOracle || msg.sender == owner(), "Not authorized");
+        
+        Round storage round = rounds[currentRoundId];
+        require(block.timestamp >= round.endTime, "Round not ended");
+        require(!round.resolved, "Already resolved");
+        
+        round.endPrice = endPrice;
+        round.resolved = true;
+        round.upWins = endPrice > round.startPrice;
+        
+        emit RoundResolved(currentRoundId, endPrice, round.upWins);
+        
+        // Start next round
+        currentRoundId++;
+        _startRound();
     }
     
     /**
      * @dev Claim rewards for a resolved round
-     * @param roundId Round to claim rewards from
+     * @param roundId The round ID to claim rewards for
      */
-    function claimReward(uint256 roundId) external nonReentrant validRound(roundId) {
+    function claimRewards(uint256 roundId) external nonReentrant {
         Round storage round = rounds[roundId];
         require(round.resolved, "Round not resolved");
         
         Prediction storage prediction = predictions[roundId][msg.sender];
         require(prediction.amount > 0, "No prediction found");
         require(!prediction.claimed, "Already claimed");
-        
-        uint256 rewardAmount = 0;
-        
-        // Check if user won
-        Position winningPosition = round.endPrice > round.lockPrice ? Position.UP : Position.DOWN;
-        
-        if (prediction.position == winningPosition) {
-            // Calculate proportional reward
-            uint256 winningPool = winningPosition == Position.UP ? round.totalUpAmount : round.totalDownAmount;
-            
-            if (winningPool > 0) {
-                rewardAmount = (prediction.amount * round.rewardAmount) / winningPool;
-            }
-            
-            // Update user stats
-            userStats[msg.sender].totalWinnings += rewardAmount;
-            userStats[msg.sender].wonRounds++;
-            userStats[msg.sender].currentWinStreak++;
-            
-            if (userStats[msg.sender].currentWinStreak > userStats[msg.sender].maxWinStreak) {
-                userStats[msg.sender].maxWinStreak = userStats[msg.sender].currentWinStreak;
-            }
-        } else {
-            // User lost, reset win streak
-            userStats[msg.sender].currentWinStreak = 0;
-        }
+        require(prediction.isUp == round.upWins, "Prediction incorrect");
         
         prediction.claimed = true;
-        prediction.claimableAmount = rewardAmount;
         
-        if (rewardAmount > 0) {
-            neuralToken.safeTransfer(msg.sender, rewardAmount);
-        }
+        // Calculate rewards
+        uint256 winningPool = round.upWins ? round.upAmount : round.downAmount;
+        uint256 losingPool = round.upWins ? round.downAmount : round.upAmount;
         
-        emit RewardClaimed(msg.sender, roundId, rewardAmount);
-    }
-    
-    /**
-     * @dev Get claimable amount for a user in a specific round
-     */
-    function getClaimableAmount(uint256 roundId, address user) external view returns (uint256) {
-        Round memory round = rounds[roundId];
-        Prediction memory prediction = predictions[roundId][user];
-        
-        if (!round.resolved || prediction.amount == 0 || prediction.claimed) {
-            return 0;
-        }
-        
-        Position winningPosition = round.endPrice > round.lockPrice ? Position.UP : Position.DOWN;
-        
-        if (prediction.position == winningPosition) {
-            uint256 winningPool = winningPosition == Position.UP ? round.totalUpAmount : round.totalDownAmount;
+        if (winningPool > 0 && losingPool > 0) {
+            // Calculate user's share of the winning pool
+            uint256 userShare = (prediction.amount * BASIS_POINTS) / winningPool;
             
-            if (winningPool > 0) {
-                return (prediction.amount * round.rewardAmount) / winningPool;
+            // Calculate rewards from losing pool (minus treasury fee)
+            uint256 treasuryAmount = (losingPool * treasuryFee) / BASIS_POINTS;
+            uint256 rewardPool = losingPool - treasuryAmount;
+            uint256 userReward = (rewardPool * userShare) / BASIS_POINTS;
+            
+            // Total payout = original bet + reward
+            uint256 totalPayout = prediction.amount + userReward;
+            
+            // Update user stats
+            userStats[msg.sender].correctPredictions++;
+            userStats[msg.sender].currentStreak++;
+            userStats[msg.sender].totalWinnings += userReward;
+            
+            if (userStats[msg.sender].currentStreak > userStats[msg.sender].bestStreak) {
+                userStats[msg.sender].bestStreak = userStats[msg.sender].currentStreak;
             }
+            
+            // Transfer rewards
+            payable(msg.sender).transfer(totalPayout);
+            
+            emit RewardsClaimed(msg.sender, roundId, totalPayout);
+        } else {
+            // If no losing pool, just return the bet
+            payable(msg.sender).transfer(prediction.amount);
+            emit RewardsClaimed(msg.sender, roundId, prediction.amount);
         }
+    }
+    
+    /**
+     * @dev Handle incorrect predictions (reset streak)
+     * @param user The user address
+     * @param roundId The round ID
+     */
+    function handleIncorrectPrediction(address user, uint256 roundId) external {
+        require(msg.sender == address(this), "Internal function");
         
-        return 0;
-    }
-    
-    /**
-     * @dev Get user's prediction rounds
-     */
-    function getUserRounds(address user) external view returns (uint256[] memory) {
-        return userRounds[user];
-    }
-    
-    /**
-     * @dev Withdraw treasury funds (only owner)
-     */
-    function withdrawTreasury(uint256 amount) external onlyOwner {
-        require(amount <= treasuryAmount, "Insufficient treasury balance");
+        Round storage round = rounds[roundId];
+        Prediction storage prediction = predictions[roundId][user];
         
-        treasuryAmount -= amount;
-        neuralToken.safeTransfer(treasuryAddress, amount);
+        if (prediction.amount > 0 && round.resolved && prediction.isUp != round.upWins) {
+            userStats[user].currentStreak = 0;
+        }
+    }
+    
+    /**
+     * @dev Get user's prediction for a round
+     */
+    function getUserPrediction(uint256 roundId, address user) 
+        external 
+        view 
+        returns (uint256 amount, bool isUp, bool claimed) 
+    {
+        Prediction memory prediction = predictions[roundId][user];
+        return (prediction.amount, prediction.isUp, prediction.claimed);
+    }
+    
+    /**
+     * @dev Get user statistics
+     */
+    function getUserStats(address user) 
+        external 
+        view 
+        returns (
+            uint256 totalPredictions,
+            uint256 correctPredictions,
+            uint256 currentStreak,
+            uint256 bestStreak,
+            uint256 totalWinnings,
+            uint256 totalStaked
+        ) 
+    {
+        UserStats memory stats = userStats[user];
+        return (
+            stats.totalPredictions,
+            stats.correctPredictions,
+            stats.currentStreak,
+            stats.bestStreak,
+            stats.totalWinnings,
+            stats.totalStaked
+        );
+    }
+    
+    /**
+     * @dev Get current round info
+     */
+    function getCurrentRound() 
+        external 
+        view 
+        returns (
+            uint256 roundId,
+            uint256 startTime,
+            uint256 endTime,
+            uint256 lockTime,
+            uint256 upAmount,
+            uint256 downAmount,
+            uint256 totalAmount
+        ) 
+    {
+        Round memory round = rounds[currentRoundId];
+        return (
+            round.roundId,
+            round.startTime,
+            round.endTime,
+            round.lockTime,
+            round.upAmount,
+            round.downAmount,
+            round.totalAmount
+        );
+    }
+    
+    /**
+     * @dev Calculate user's accuracy percentage
+     */
+    function getUserAccuracy(address user) external view returns (uint256) {
+        UserStats memory stats = userStats[user];
+        if (stats.totalPredictions == 0) return 0;
+        return (stats.correctPredictions * 10000) / stats.totalPredictions; // Returns basis points
+    }
+    
+    /**
+     * @dev Start a new round
+     */
+    function _startRound() internal {
+        uint256 startTime = block.timestamp;
+        uint256 endTime = startTime + roundDuration;
+        uint256 lockTime = endTime - lockDuration;
         
-        emit TreasuryWithdraw(amount);
+        rounds[currentRoundId] = Round({
+            roundId: currentRoundId,
+            startTime: startTime,
+            endTime: endTime,
+            lockTime: lockTime,
+            startPrice: 0, // Will be set by oracle
+            endPrice: 0,
+            upAmount: 0,
+            downAmount: 0,
+            totalAmount: 0,
+            resolved: false,
+            upWins: false
+        });
+        
+        emit RoundStarted(currentRoundId, startTime, endTime);
     }
     
     /**
-     * @dev Update oracle address (only owner)
+     * @dev Set the starting price for the current round
      */
-    function setOracle(address _oracleAddress) external onlyOwner {
-        require(_oracleAddress != address(0), "Invalid oracle address");
-        oracleAddress = _oracleAddress;
-        emit OracleUpdated(_oracleAddress);
+    function setStartPrice(uint256 price) external {
+        require(msg.sender == priceOracle || msg.sender == owner(), "Not authorized");
+        rounds[currentRoundId].startPrice = price;
     }
     
     /**
-     * @dev Update treasury address (only owner)
+     * @dev Admin functions
      */
-    function setTreasuryAddress(address _treasuryAddress) external onlyOwner {
-        require(_treasuryAddress != address(0), "Invalid treasury address");
-        treasuryAddress = _treasuryAddress;
-        emit TreasuryAddressUpdated(_treasuryAddress);
+    function setPriceOracle(address _priceOracle) external onlyOwner {
+        priceOracle = _priceOracle;
+        emit PriceOracleUpdated(_priceOracle);
     }
     
-    /**
-     * @dev Pause contract (only owner)
-     */
+    function setTreasuryFee(uint256 _fee) external onlyOwner {
+        require(_fee <= 1000, "Fee too high"); // Max 10%
+        treasuryFee = _fee;
+    }
+    
+    function setMinimumBet(uint256 _minimumBet) external onlyOwner {
+        minimumBet = _minimumBet;
+    }
+    
+    function setRoundDuration(uint256 _duration) external onlyOwner {
+        require(_duration >= 1 hours, "Duration too short");
+        roundDuration = _duration;
+    }
+    
     function pause() external onlyOwner {
         _pause();
     }
     
-    /**
-     * @dev Unpause contract (only owner)
-     */
     function unpause() external onlyOwner {
         _unpause();
     }
     
     /**
-     * @dev Emergency withdraw (only owner, when paused)
+     * @dev Emergency withdraw (only owner)
      */
-    function emergencyWithdraw() external onlyOwner whenPaused {
-        uint256 balance = neuralToken.balanceOf(address(this));
-        neuralToken.safeTransfer(owner(), balance);
+    function emergencyWithdraw() external onlyOwner {
+        payable(owner()).transfer(address(this).balance);
+    }
+    
+    /**
+     * @dev Withdraw treasury fees
+     */
+    function withdrawTreasuryFees() external {
+        require(msg.sender == treasury || msg.sender == owner(), "Not authorized");
+        // Implementation would track and withdraw accumulated fees
     }
 }
